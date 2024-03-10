@@ -1,0 +1,12 @@
+NAME: 'Grid trading bot'
+MODULE: 'grid'
+CLASS: 'Grid'
+INTERVAL: '1m'
+PARAMETERS:
+  direction: 1
+  grid_spacing: 1
+  stop_loss: 15
+  max_investment: 3000
+  tp_multiplier: 1.25
+WATCHLIST: ['ETH/USDT:USDT']
+INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others
