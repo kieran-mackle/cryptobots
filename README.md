@@ -15,9 +15,7 @@ regularly.
 <details>
   <summary><b>EMA crossover trading bot</b></summary>
     This bot will trade trends by using the EMA crossover strategy. Below are some backtest
-    results on ETH to give you an idea of how it trades.
-
-    ![backtest chart](docs/emac-backtest.png)
+    results on ETH.
 
     ----------------------------------------------
                   Trading Results
@@ -48,8 +46,6 @@ regularly.
     will act as a trend-follower with a trailing stop loss at each new grid level.
     Below is a backtest result from running the grid bot in long trend mode on ETH/USDT 
     perpetual from February 1st to March 9th 2024.
-
-    ![backtest chart](docs/grid-backtest.png)
 
     ----------------------------------------------
                   Trading Results
