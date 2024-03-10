@@ -25,6 +25,11 @@ dependencies = [
   'johnnydep',
 ]
 
+[project.urls]
+Repository = "https://github.com/kieran-mackle/cryptobots"
+Issues = "https://github.com/kieran-mackle/cryptobots/issues"
+Changelog = "https://github.com/kieran-mackle/cryptobots/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
   'black >= 23.9.1',
