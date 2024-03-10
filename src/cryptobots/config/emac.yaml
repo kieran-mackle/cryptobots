@@ -1,0 +1,13 @@
+NAME: 'EMA Crossover'
+MODULE: 'emac'
+CLASS: 'Emac'
+INTERVAL: '1h'
+PARAMETERS:
+  direction: 0
+  fast_ema: 10
+  slow_ema: 40
+  trend_ema: 200
+  trade_pc: 10
+  atr_stop_mulitplier: 3
+WATCHLIST: ['ETH/USDT:USDT']
+INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others

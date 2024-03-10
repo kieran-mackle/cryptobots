@@ -1,0 +1,12 @@
+NAME: 'Time-weighted average price bot'
+MODULE: 'twap'
+CLASS: 'Twap'
+INTERVAL: '1s'
+PERIOD: 300
+PARAMETERS:
+  target: 6
+  duration: '20m'
+WATCHLIST: ['ETH/USDT:USDT']
+INCLUDE_BROKER: True
+INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others
+BACKTEST_READY: False
