@@ -106,6 +106,11 @@ class Cc(Strategy):
         # Compare to target positions
         deltas = {s: self.target_sizes[s] - c for s, c in current_sizes.items()}
 
+        # Adjust deltas by amount limits
+        deltas = {
+            s: d if d > self.min_amounts[s] else Decimal("0") for s, d in deltas.items()
+        }
+
         # Create orders for deltas
         for symbol, delta in deltas.items():
             if delta != 0:
@@ -151,6 +156,10 @@ class Cc(Strategy):
         }
         self.size_precision = {
             s: Decimal(str(i["precision"]["amount"])).normalize()
+            for s, i in self.instrument_info.items()
+        }
+        self.min_amounts = {
+            s: Decimal(str(i["limits"]["amount"]["min"]))
             for s, i in self.instrument_info.items()
         }
 
