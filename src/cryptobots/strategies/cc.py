@@ -61,6 +61,7 @@ class Cc(Strategy):
         self.configure_instruments(instrument)
 
         # Check balance
+        self.bad_start = False
         usdt_balance = self.exchange.get_balance("USDT")
         if usdt_balance < self.target_value:
             self.logger.error(
@@ -80,6 +81,7 @@ class Cc(Strategy):
         funding_rate = self.exchange.api.fetch_funding_rate(symbol=self.perp)[
             "fundingRate"
         ]
+        self.logger.debug(f"Funding rate is currently {funding_rate*100:.4f}%")
         if funding_rate < self.funding_pc_threshold:
             # Funding below threshold - update target sizes
             self.winding_down = True
@@ -120,7 +122,7 @@ class Cc(Strategy):
                     order_type="limit",
                     order_limit_price=price,
                 )
-                # self.exchange.place_order(order)
+                self.exchange.place_order(order)
 
     def configure_instruments(self, instrument: str):
         """Configure the perp and spot instrument symbols."""
