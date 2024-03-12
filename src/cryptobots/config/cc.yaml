@@ -1,0 +1,11 @@
+NAME: 'Cash and Carry'
+MODULE: 'cc'
+CLASS: 'Cc'
+INTERVAL: '1m'
+PARAMETERS:
+  value: 100
+  slippage_pc: 0.025
+  funding_pc_threshold: 0.1
+WATCHLIST: ['GPT']
+INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others
+BACKTEST_READY: False

@@ -1,4 +1,4 @@
-NAME: 'Grid trading bot'
+NAME: 'Grid Trading'
 MODULE: 'grid'
 CLASS: 'Grid'
 INTERVAL: '1m'

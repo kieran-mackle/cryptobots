@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  'autotrader > 0.12.1',
+  'autotrader >= 1.0.0',
   'ccxt',
   'websockets',
   'Click',
