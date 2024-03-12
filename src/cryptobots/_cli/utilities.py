@@ -3,10 +3,17 @@ import sys
 import time
 import ccxt
 import json
+import glob
 import click
+import asyncio
 import importlib
+import pandas as pd
 from art import tprint
+import ccxt.pro as ccxt_pro
 from typing import Optional
+from cryptobots._cli import constants
+from datetime import datetime, timedelta
+from autotrader.utilities import read_yaml
 
 
 def strategy_name_from_module_name(name: str):
@@ -128,15 +135,40 @@ def check_for_update():
             pip.main(["install", "--upgrade", "cryptobots"])
 
 
+def check_update_condition(init_file: str):
+    # Check when last update check was performed
+    with open(init_file, "r") as f:
+        lines = f.readlines()
+
+    # Parse update time
+    if len(lines) == 0:
+        # Initialised previously, but no time present
+        last_update = datetime.now() - timedelta(days=2)
+
+    else:
+        # Get last update check time
+        last_update = datetime.strptime(lines[0].strip("\n"), constants.STRFTIME)
+
+    # Check for update
+    if last_update.date() < datetime.now().date():
+        check_for_update()
+
+        # Update file
+        write_init_file(init_file)
+
+
 def check_home_dir():
     """Check if the default cryptobots home directory exists, and if not, ask user
     for path.
     """
     # Find home directory and configure paths
-    home_dir = os.path.join(os.path.expanduser("~"), ".cryptobots")
+    home_dir = os.path.join(os.path.expanduser("~"), constants.DEFAULT_HOME_DIRECTORY)
     if not os.path.exists(home_dir):
         home_dir: str = click.prompt(
             text=click.style(text="Enter cryptobots home directory", fg="green"),
+            default=os.path.join(
+                os.path.expanduser("~"), constants.DEFAULT_HOME_DIRECTORY
+            ),
         )
     return home_dir
 
@@ -231,18 +263,37 @@ def select_exchange_and_env(
     return exchange, environment
 
 
-def select_strategy(strat_configs: list[str], strategy: Optional[str] = None):
-    """Select a strategy name."""
-    # Get list of strategy names
-    strategy_names = [
-        f.split(os.sep)[-1].split(".yaml")[0] for f in strat_configs if "keys" not in f
+def list_strategies(strat_config_dir: str, msg: Optional[str] = None):
+    # Load config files
+    strat_configs = [
+        read_yaml(f)
+        for f in glob.glob(os.path.join(strat_config_dir, "*.yaml"))
+        if "keys" not in f
     ]
+    strategy_names = {c["NAME"]: c for c in strat_configs}
+    mod_name_map = {c["MODULE"]: c["NAME"] for c in strat_configs}
+
+    # Construct selection mapper
+    mapper = {}
+    if msg is None:
+        msg = "Select a strategy to run:\n"
+    for i, (mod, name) in enumerate(mod_name_map.items()):
+        msg += f"  [{i+1}] {mod}: {name}\n"
+        mapper[i + 1] = mod
+
+    return mapper, msg
+
+
+def select_strategy(strat_config_dir: str, strategy: Optional[str] = None):
+    """Select a strategy name."""
+    # Construct strategy list message and selection map
+    mapper, msg = list_strategies(strat_config_dir)
 
     # Check user specified strategy
     strategy_name = None
     if strategy is not None:
         # Check strategy exists
-        if strategy not in strategy_names:
+        if strategy not in mapper.values():
             msg = f"Error: '{strategy}' strategy not found."
             click.echo(click.style(msg, fg="red"))
         else:
@@ -250,15 +301,10 @@ def select_strategy(strat_configs: list[str], strategy: Optional[str] = None):
             strategy_name = strategy
 
     while strategy_name is None:
-        # Prompt user for strategy
-        mapper = {}
-        msg = "Select a strategy to run:\n"
-        for i, name in enumerate(strategy_names):
-            msg += f"  [{i+1}] {name}\n"
-            mapper[i + 1] = name
+        # Display available strategies
         click.echo(msg)
 
-        # Get param to update
+        # Prompt user for strategy
         strategy_selection: int = click.prompt(
             text=click.style(text="Enter strategy number", fg="green"),
             type=click.INT,
@@ -280,7 +326,14 @@ def get_strategy_object(strategy_name: str, strategy_dir: str):
     return strategy_obj_name, strategy_object
 
 
-def show_strategy_params(strategy_config: dict, strategy_name: str, msg: str = None):
+def show_strategy_params(
+    strategy_config: dict, strategy_name: str, msg: str = None, instrument: str = None
+):
+    if instrument is not None:
+        # Use instrument specified
+        strategy_config["WATCHLIST"] = [instrument]
+
+    # Build parameter map
     param_map = {}
     EXCLUDE = [
         "name",
@@ -390,3 +443,128 @@ def save_backtest_config(home_dir: str, filename: str, config: dict):
         json.dump(config, f)
 
     return fp
+
+
+def create_link(url: str, label: str = None) -> str:
+    if label is None:
+        # Display URL as label
+        label = url
+    parameters = ""
+    escape_mask = "\033]8;{};{}\033\\{}\033]8;;\033\\"
+    return escape_mask.format(parameters, url, label)
+
+
+async def funding_rates(exchange: ccxt_pro.Exchange):
+    # Load funding rates
+    funding: dict[str, dict] = await exchange.fetch_funding_rates()
+    formatted_funding = {
+        symbol: info["fundingRate"] for symbol, info in funding.items()
+    }
+    df = pd.Series(formatted_funding).to_frame(name="funding rate [%]")
+
+    # Add annualised rate column
+    df["annualised rate [%]"] = df["funding rate [%]"] * 3 * 365
+
+    return df
+
+
+async def get_prices(exchange: ccxt_pro.Exchange, symbols: list[str]):
+    """Returns mid prices for a list of symbols."""
+    tasks = [exchange.fetch_order_book(symbol, limit=1) for symbol in symbols]
+    obs = await asyncio.gather(*tasks, return_exceptions=False)
+    prices = {ob["symbol"]: (ob["bids"][0][0] + ob["asks"][0][0]) / 2 for ob in obs}
+    return prices
+
+
+async def get_cash_and_carry(exchange: str, prices: bool):
+    # Instantiate exchange
+    exchange: ccxt.Exchange = getattr(ccxt_pro, exchange.lower())()
+    markets = await exchange.load_markets()
+
+    # Get funding rates
+    df = await funding_rates(exchange)
+
+    # Convert to percentages
+    df = df * 100
+
+    # Add column for spot
+    has_spot = {}
+    perp_to_spot = {}
+    for symbol in df.index:
+        # Remove leading multiplier
+        if symbol.startswith("10"):
+            # Find where multiplier stops
+            for i, char in enumerate(symbol[2:]):
+                if char != "0":
+                    break
+            base = symbol[i + 2 :].split("/")[0]
+
+        else:
+            base = symbol.split("/")[0]
+
+        # Check for base token in spot markets
+        spot_symbol = f"{base}/USDT"
+        spot_exists = spot_symbol in markets
+        has_spot[symbol] = spot_exists
+        if spot_exists:
+            perp_to_spot[symbol] = spot_symbol
+    df["spot available"] = pd.Series(has_spot)
+
+    # For cash and carry, filter by markets which have spot
+    cash_and_carry = (
+        df.loc[df["spot available"]]
+        .sort_values("funding rate [%]", ascending=False)
+        .dropna()
+    )
+
+    # Add spot symbols
+    cash_and_carry["token"] = pd.Series(
+        {p: s.split("/")[0] for p, s in perp_to_spot.items()}
+    )
+
+    # Add links to symbols
+    # if exchange.name.lower() == "bybit":
+    #     links = {symbol: f"https://www.bybit.com/trade/usdt/{symbol}?affiliate_id=7NDOBW" for symbol in cash_and_carry.index}
+    #     cash_and_carry["link"] = pd.Series(links)
+
+    # Check to fetch price data too
+    show_cols = ["funding rate [%]", "annualised rate [%]"]
+    if prices:
+        # Get prices for perp and spot
+        perp_prices = get_prices(exchange, symbols=list(perp_to_spot.keys()))
+        spot_prices = get_prices(exchange, symbols=list(perp_to_spot.values()))
+        click.echo("Searching for opportunities...")
+        perp_prices, spot_prices = await asyncio.gather(perp_prices, spot_prices)
+
+        # Reindex spot by the perp symbol
+        spot_prices_by_perp = {p: spot_prices[s] for p, s in perp_to_spot.items()}
+
+        # Add price columns
+        # TODO - fix display format
+        cash_and_carry["perp price"] = pd.Series(perp_prices)
+        cash_and_carry["spot price"] = pd.Series(spot_prices_by_perp)
+
+        # Add discount/premium colum
+        # TODO - change this to be more readable
+        cash_and_carry["premium"] = (
+            100
+            * (cash_and_carry["perp price"] - cash_and_carry["spot price"])
+            / cash_and_carry["spot price"]
+        )
+
+        # Update columns to be shown
+        show_cols.extend(["perp price", "spot price", "premium"])
+
+    # Close exchange connection
+    await exchange.close()
+
+    # Update index
+    cash_and_carry.set_index("token", inplace=True, drop=True)
+
+    return cash_and_carry[show_cols]
+
+
+def write_init_file(init_file: str):
+    """Writes the init file and current date."""
+    with open(init_file, "w") as f:
+        f.write(f"{datetime.now().strftime(constants.STRFTIME)}\n")
