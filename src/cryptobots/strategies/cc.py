@@ -117,8 +117,13 @@ class Cc(Strategy):
                 # Fire limit order (not post only)
                 direction = np.sign(delta)
                 book = self.exchange.get_orderbook(symbol)
+                ref_price = (
+                    book.bids["price"].iloc[0]
+                    if direction < 0
+                    else book.asks["price"].iloc[0]
+                )
                 price = Decimal(
-                    book.midprice * (1 + direction * self.slippage_limit)
+                    ref_price * (1 + direction * self.slippage_limit)
                 ).quantize(self.price_precision[symbol])
                 order = Order(
                     instrument=symbol,
