@@ -19,7 +19,6 @@ classifiers = [
 dependencies = [
   'autotrader >= 1.0.0',
   'ccxt',
-  'websockets',
   'Click',
   'trogon',
   'johnnydep',

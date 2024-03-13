@@ -230,13 +230,13 @@ command line interface as described above.<br>
 </details>
 
 <details>
-  <summary><b>Where should I run ryptobots?</b></summary>
-You can run cryptobots on any regular computer - you just need to have Python installed.<br>
+  <summary><b>Where should I run CryptoBots?</b></summary>
+You can run CryptoBots on any regular computer - you just need to have Python installed.<br>
 </details>
 
 <details>
   <summary><b>Are my API keys safe?</b></summary>
-Yes! When you set up `cryptobots` and enter your exchange API keys, they get
+Yes! When you set up CryptoBots and enter your exchange API keys, they get
 stored on your computer in the `.cryptobots/` folder of your home directory (unless 
 you specify a different location). This is where they stay. Make sure to follow general
 cyber security practices and you should be fine. Never share your keys online!<br>

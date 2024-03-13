@@ -106,9 +106,13 @@ class Cc(Strategy):
         # Compare to target positions
         deltas = {s: self.target_sizes[s] - c for s, c in current_sizes.items()}
 
+        # Adjust by amount precisions
+        deltas = {s: d.quantize(self.size_precision[s]) for s, d in deltas.items()}
+
         # Adjust deltas by amount limits
         deltas = {
-            s: d if d > self.min_amounts[s] else Decimal("0") for s, d in deltas.items()
+            s: d if abs(d) > self.min_amounts[s] else Decimal("0")
+            for s, d in deltas.items()
         }
 
         # Create orders for deltas
