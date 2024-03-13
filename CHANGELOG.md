@@ -1,3 +1,9 @@
+## v0.2.1 (2024-03-13)
+
+### Fix
+
+- **Strategy**: fixed delta calculation for negative amounts in cash and carry bot
+
 ## v0.2.0 (2024-03-12)
 
 ### Feat
