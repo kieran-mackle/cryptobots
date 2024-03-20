@@ -28,6 +28,8 @@ class Breakout(Strategy):
     For example, to set a 1% stop loss, sl_distance_pc=1.
 
     tp_distance_pc: the distance to set the take profit at, also specified as a percentage.
+    This is calculated even when no TP is placed - if prices crosses the theoretical TP
+    price, then the SL will be updated, trailing the trend and locking in profits!
 
     size_multiplier: the position size multiplier each time a loss level is reached. A higher
     number will recover losses quicker, but increase the risk of liquidation.
@@ -181,13 +183,11 @@ class Breakout(Strategy):
             ).quantize(self.price_precision)
 
         # Calculate SL price
-        # TODO - review if this gets moved correctly when in profit - if not, ref price
-        # might not be updating correctly.
         sl_price = (
             self.reference_price * (1 - Decimal(position.direction) * self.sl_distance)
         ).quantize(self.price_precision)
 
-        # Calculate SL size
+        # Calculate nominal SL size based on size multiplier
         current_size = abs(Decimal(str(position.net_position)))
         sl_size = ((1 + self.size_multiplier) * current_size).quantize(
             self.size_precision
@@ -197,6 +197,15 @@ class Breakout(Strategy):
         if self.completed_loops == self.max_loops:
             # Want to fully close position in profit now
             tp_size = current_size
+
+            # Check if SL has been pulled into profit by the trend
+            if (
+                position.direction * (sl_price - position.entry_price)
+                > position.entry_price * self.tp_distance
+            ):
+                # Yes; set SL size to close position rather than flip
+                sl_size = current_size
+
         else:
             # Continue trading after tp
             losses = np.ceil(
