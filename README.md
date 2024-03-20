@@ -125,6 +125,18 @@ CryptoBots currently includes the strategies listed below.
     into smaller trades to avoid slippage.
 </details>
 
+<details>
+  <summary><b>Breakout bot</b></summary>
+    This bot is perfect for trading trending tokens using a breakout strategy.<br><br>
+    The strategy works by making an initial trade in the direction of the trend, 
+    determined using an exponential moving average. However, if price moves against the 
+    open position by a certain amount, the position direction will be reversed. This 
+    makes the assumption that a trend is coming up, and price will not remain within the 
+    bounds set by the stop loss distance.<br><br>
+    If you are feeling extra certain about an impending trend, you can increase the size
+    multilpier, so that losses are recovered quicker.
+</details>
+
 
 ### Coming soon
 The following strategies will be added soon.
@@ -132,11 +144,6 @@ The following strategies will be added soon.
 <details>
   <summary><b>Mean reversion bot</b></summary>
     This bot will use limit orders to trade around a mean price, capturing market fluctuations.
-</details>
-
-<details>
-  <summary><b>Breakout bot</b></summary>
-    This bot will identify trending tokens using a breakout strategy.
 </details>
 
 
@@ -155,8 +162,6 @@ yet to do extensive testing on them. More will be added soon!
 | Exchange | Referral code |
 | -------- | ------------- |
 | [Bybit](https://www.bybit.com/invite?ref=7NDOBW)    | 7NDOBW |
-<!-- | [OKX](https://www.okx.com/join/52421048) | 52421048 | -->
-<!-- | [KuCoin](https://www.kucoin.com/r/rf/QBSFBCDM) | QBSFBCDM | -->
 
 
 <p align="right">[<a href="#readme-top">back to top</a>]</p>

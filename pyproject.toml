@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  'autotrader >= 1.0.0',
+  'autotrader >= 1.1.0',
   'ccxt',
   'Click',
   'trogon',
