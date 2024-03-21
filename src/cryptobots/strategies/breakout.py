@@ -17,7 +17,8 @@ class Breakout(Strategy):
     determined using an exponential moving average. However, if price moves against the
     open position by a certain amount, the position direction will be reversed. This
     makes the assumption that a trend is coming up, and price will not remain within the
-    bounds set by the stop loss distance.
+    bounds set by the stop loss distance. It has a similar payoff to an options straddle,
+    ignoring any transactions costs.
 
     If you are feeling extra certain about an impending trend, you can increase the size
     multilpier, so that losses are recovered quicker.
@@ -200,8 +201,8 @@ class Breakout(Strategy):
 
             # Check if SL has been pulled into profit by the trend
             if (
-                position.direction * (sl_price - position.entry_price)
-                > position.entry_price * self.tp_distance
+                position.direction * (sl_price - Decimal(str(position.entry_price)))
+                > Decimal(str(position.entry_price)) * self.tp_distance
             ):
                 # Yes; set SL size to close position rather than flip
                 sl_size = current_size
