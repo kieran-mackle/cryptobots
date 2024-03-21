@@ -1,3 +1,15 @@
+## v0.3.0 (2024-03-21)
+
+### Feat
+
+- **Strategy**: added range bonud grid strategy
+- **Strategy**: breakout strategy will adjust stop loss size to close position in profit
+- **Strategy**: added breakout trend following strategy
+
+### Fix
+
+- **Strategy**: decimal conversion errors
+
 ## v0.2.1 (2024-03-13)
 
 ### Fix
