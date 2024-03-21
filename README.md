@@ -131,6 +131,15 @@ CryptoBots currently includes the strategies listed below.
 </details>
 
 <details>
+  <summary><b>Range Bound Grid Bot</b></summary>
+    This is similar to the grid bot above, but it is configured by specifying the
+    upper and lower price bounds of the grid directly. It is also only for neutral grids (long
+    and short trading about a reference price). Since this is a mean reversion strategy,
+    only limit orders are used for trade entries. It is a bit more intuitive to set up, and
+    allows you to specify the maximum position size and total number of grid levels.
+</details>
+
+<details>
   <summary><b>TWAP Bot</b></summary>
     This bot will buy a chunk of tokens every update period until the
     target position is reached. Useful for splitting up a large position
@@ -142,8 +151,9 @@ CryptoBots currently includes the strategies listed below.
 The following strategies will be added soon.
 
 <details>
-  <summary><b>Mean reversion bot</b></summary>
-    This bot will use limit orders to trade around a mean price, capturing market fluctuations.
+  <summary><b>EMA mean reversion bot</b></summary>
+    This bot will use limit orders to trade around a dynamic mean price, capturing
+    market fluctuations on short timeframes.
 </details>
 
 
