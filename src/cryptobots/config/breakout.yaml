@@ -1,0 +1,16 @@
+NAME: 'Breakout Trend Following'
+MODULE: 'breakout'
+CLASS: 'Breakout'
+INTERVAL: '3s'
+PARAMETERS:
+  sl_distance_pc: 4
+  tp_distance_pc: 4
+  size_multiplier: 2
+  trend_interval: '1m'
+  trend_ema_period: 100
+  tp_after_loss: 5
+  entry_value: 0
+  loops: 1
+WATCHLIST: ['POLYX/USDT:USDT']
+INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others
+BACKTEST_READY: False

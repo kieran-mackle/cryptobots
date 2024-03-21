@@ -61,6 +61,18 @@ CryptoBots currently includes the strategies listed below.
 </details>
 
 <details>
+  <summary><b>Breakout bot</b></summary>
+    This bot is perfect for trading trending tokens using a breakout strategy.<br><br>
+    The strategy works by making an initial trade in the direction of the trend, 
+    determined using an exponential moving average. However, if price moves against the 
+    open position by a certain amount, the position direction will be reversed. This 
+    makes the assumption that a trend is coming up, and price will not remain within the 
+    bounds set by the stop loss distance.<br><br>
+    If you are feeling extra certain about an impending trend, you can increase the size
+    multilpier, so that losses are recovered quicker.
+</details>
+
+<details>
   <summary><b>EMA crossover trading bot</b></summary>
     This bot will trade trends by using the EMA crossover strategy. Below are some backtest
     results on ETH.<br>
@@ -119,6 +131,15 @@ CryptoBots currently includes the strategies listed below.
 </details>
 
 <details>
+  <summary><b>Range Bound Grid Bot</b></summary>
+    This is similar to the grid bot above, but it is configured by specifying the
+    upper and lower price bounds of the grid directly. It is also only for neutral grids (long
+    and short trading about a reference price). Since this is a mean reversion strategy,
+    only limit orders are used for trade entries. It is a bit more intuitive to set up, and
+    allows you to specify the maximum position size and total number of grid levels.
+</details>
+
+<details>
   <summary><b>TWAP Bot</b></summary>
     This bot will buy a chunk of tokens every update period until the
     target position is reached. Useful for splitting up a large position
@@ -130,13 +151,9 @@ CryptoBots currently includes the strategies listed below.
 The following strategies will be added soon.
 
 <details>
-  <summary><b>Mean reversion bot</b></summary>
-    This bot will use limit orders to trade around a mean price, capturing market fluctuations.
-</details>
-
-<details>
-  <summary><b>Breakout bot</b></summary>
-    This bot will identify trending tokens using a breakout strategy.
+  <summary><b>EMA mean reversion bot</b></summary>
+    This bot will use limit orders to trade around a dynamic mean price, capturing
+    market fluctuations on short timeframes.
 </details>
 
 
@@ -155,8 +172,6 @@ yet to do extensive testing on them. More will be added soon!
 | Exchange | Referral code |
 | -------- | ------------- |
 | [Bybit](https://www.bybit.com/invite?ref=7NDOBW)    | 7NDOBW |
-<!-- | [OKX](https://www.okx.com/join/52421048) | 52421048 | -->
-<!-- | [KuCoin](https://www.kucoin.com/r/rf/QBSFBCDM) | QBSFBCDM | -->
 
 
 <p align="right">[<a href="#readme-top">back to top</a>]</p>
@@ -224,6 +239,14 @@ CryptoBots as a nice deployment framework.<br>
 </details>
 
 <details>
+  <summary><b>Are my API keys safe?</b></summary>
+Yes! When you set up CryptoBots and enter your exchange API keys, they get
+stored on your computer in the `.cryptobots/` folder of your home directory (unless 
+you specify a different location). This is where they stay. Make sure to follow general
+cyber security practices and you should be fine. Never share your keys online!<br>
+</details>
+
+<details>
   <summary><b>Do I need to know how to code?</b></summary>
 No! The trading strategies have been written for you! Simply deploy them using the 
 command line interface as described above.<br>
@@ -232,14 +255,6 @@ command line interface as described above.<br>
 <details>
   <summary><b>Where should I run CryptoBots?</b></summary>
 You can run CryptoBots on any regular computer - you just need to have Python installed.<br>
-</details>
-
-<details>
-  <summary><b>Are my API keys safe?</b></summary>
-Yes! When you set up CryptoBots and enter your exchange API keys, they get
-stored on your computer in the `.cryptobots/` folder of your home directory (unless 
-you specify a different location). This is where they stay. Make sure to follow general
-cyber security practices and you should be fine. Never share your keys online!<br>
 </details>
 
 <details>

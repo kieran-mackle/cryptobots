@@ -1,0 +1,12 @@
+NAME: 'Range Bound Grid Trading'
+MODULE: 'range'
+CLASS: 'Range'
+INTERVAL: '10s'
+PARAMETERS:
+  lower_price: 0.34
+  upper_price: 0.4
+  no_levels: 20
+  max_position: 50
+WATCHLIST: ['POLYX/USDT:USDT']
+INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others
+BACKTEST_READY: False
