@@ -107,6 +107,9 @@ class Breakout(Strategy):
         # Check position
         if position:
             # Position held, manage it
+            self.completed_loops = max(
+                1, self.completed_loops
+            )  # minimum 1 since position exists (allow restarts)
             self.manage_position(position[self.instrument])
 
         else:
@@ -195,9 +198,15 @@ class Breakout(Strategy):
         )
 
         # Calculate TP size
+        losses = np.ceil(
+            (current_size / self.base_size).ln() / self.size_multiplier.ln()
+        )
         if self.completed_loops == self.max_loops:
             # Want to fully close position in profit now
-            tp_size = current_size
+            # Set TP size to close entire position if number of losses
+            # limit has been reached, otherwise do not place a TP, instead
+            # let SL trail behind trend
+            tp_size = current_size if losses >= self.tp_after_loss else 0
 
             # Check if SL has been pulled into profit by the trend
             if (
@@ -208,10 +217,7 @@ class Breakout(Strategy):
                 sl_size = current_size
 
         else:
-            # Continue trading after tp
-            losses = np.ceil(
-                (current_size / self.base_size).ln() / self.size_multiplier.ln()
-            )
+            # Continue trading after tp - only reduce to base size
             tp_size = (
                 current_size - self.base_size if losses >= self.tp_after_loss else 0
             )
