@@ -1,3 +1,10 @@
+## v0.4.0 (2024-03-22)
+
+### Feat
+
+- support adding user-defined projects for custom bot deployment
+- **Strategy**: improve breakout strategy
+
 ## v0.3.0 (2024-03-21)
 
 ### Feat
