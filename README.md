@@ -177,6 +177,16 @@ yet to do extensive testing on them. More will be added soon!
 <p align="right">[<a href="#readme-top">back to top</a>]</p>
 
 
+## Other Features
+
+### User-defined strategies
+CryptoBots can also be used as a convenient tool to deploy your own 
+[AutoTrader](https://github.com/kieran-mackle/AutoTrader) bots. To do so, use the 
+`cryptobots configure` method to add the path to your project directory. Then, when you
+are ready to deploy a bot, specify the project name using the `--project` argument in
+the `cryptobots run` command.
+
+
 ## Getting Started
 ### Installation
 CryptoBots can be installed from [PyPi](https://pypi.org/project/cryptobots) using `pip install`:

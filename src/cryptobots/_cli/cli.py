@@ -39,6 +39,11 @@ def cli():
     help="Specify the strategy configuration file.",
 )
 @click.option(
+    "--project",
+    "-p",
+    help="Run a bot from a custom project.",
+)
+@click.option(
     "--background",
     "-b",
     help="Run the strategy in a background process.",
@@ -58,11 +63,13 @@ def run(
     instrument: str,
     config: str,
     background: bool,
+    project: str,
     launch: str,
 ):
     """Run cryptobots."""
     import os
     import sys
+    import json
     import subprocess
     from autotrader import AutoTrader, utilities
     from cryptobots._cli.utilities import (
@@ -74,11 +81,12 @@ def run(
         show_strategy_params,
         create_at_inputs,
         check_update_condition,
+        save_backtest_config,
     )
 
     # Find home directory and configure paths
     home_dir = check_home_dir()
-    config_dir = os.path.join(home_dir, "config")
+    config_dir = os.path.join(home_dir, constants.CONFIG_DIRECTORY)
     file_dir = os.path.dirname(os.path.abspath(__file__))
     strat_config_dir = os.path.normpath(
         os.path.join(file_dir, "..", constants.CONFIG_DIRECTORY)
@@ -90,7 +98,38 @@ def run(
     user_config_dir = os.path.normpath(
         os.path.join(home_dir, constants.USER_CONFIG_DIRECTORY)
     )
-    init_file = os.path.join(home_dir, constants.INIT_FILE)
+    init_file = os.path.join(home_dir, constants.CONFIG_FILE)
+
+    if project:
+        # User project specified, check it has been added
+        if os.path.exists(init_file):
+            # Load existing config
+            with open(init_file, "r") as f:
+                cb_config = json.load(f)
+        else:
+            click.echo(
+                "Please complete the initialisation before trying to "
+                + "run a custom project."
+            )
+            sys.exit()
+
+        # Check
+        if "projects" not in cb_config:
+            click.echo("You have not added any projects yet!")
+            sys.exit()
+
+        else:
+            if project not in cb_config["projects"]:
+                click.echo(f"Cannot find '{project} in your projects. Add it first.")
+            else:
+                # Project found; overwrite paths
+                project_dir_path = cb_config["projects"][project]
+                strategy_dir = os.path.join(
+                    project_dir_path, constants.STRATEGY_DIRECTORY
+                )
+                strat_config_dir = os.path.join(
+                    project_dir_path, constants.CONFIG_DIRECTORY
+                )
 
     # Check for pacakge update
     if os.path.exists(init_file):
@@ -127,14 +166,6 @@ def run(
         # Get exchange to trade on
         exchange, environment = select_exchange_and_env(keys_config, exchange, mode)
 
-        # Get strategy to run
-        strategy_name = select_strategy(strat_config_dir, strategy)
-
-        # Load the strategy object
-        strategy_obj_name, strategy_object = get_strategy_object(
-            strategy_name, strategy_dir
-        )
-
         # Load strategy configuration
         load_config = True
         if config is not None:
@@ -158,11 +189,20 @@ def run(
                     )
                 )
 
+        # Get strategy to run
         if load_config:
             # Load default configuration
+            strategy_name = select_strategy(strat_config_dir, strategy)
             strategy_config = utilities.read_yaml(
                 os.path.join(strat_config_dir, f"{strategy_name}.yaml")
             )
+
+        else:
+            # Extract strategy name from loaded config
+            strategy_name = strategy_config["MODULE"]
+
+        # Load the strategy object
+        _, strategy_object = get_strategy_object(strategy_name, strategy_dir)
 
         # Show strategy parameters
         param_map = show_strategy_params(
@@ -181,6 +221,24 @@ def run(
             param_map = show_strategy_params(
                 strategy_config, strategy_name, msg="Updated strategy parameters:\n"
             )
+
+            # Optionally save this config to allow re-using
+            save_params = click.prompt(
+                text=click.style(
+                    text="Would you like to save this configuration?", fg="green"
+                ),
+                type=click.BOOL,
+                default=False,
+            )
+            if save_params:
+                default_filename = f"{strategy_name}.yaml"
+                filename = click.prompt(
+                    text=click.style(text="Enter filename to save as", fg="green"),
+                    type=click.STRING,
+                    default=default_filename,
+                )
+                fp = save_backtest_config(home_dir, filename, strategy_config)
+                click.echo(f"Saved configuration to {fp}.")
 
         # Check strategy parameters
         if hasattr(strategy_object, "check_parameters"):
@@ -435,19 +493,21 @@ def configure():
         print_banner,
         update_keys_config,
         create_link,
-        write_init_file,
+        update_config,
+        configure_keys,
+        add_project_dir,
     )
 
     # Define paths
     home_dir = check_home_dir()
-    init_file = os.path.join(home_dir, constants.INIT_FILE)
+    init_file = os.path.join(home_dir, constants.CONFIG_FILE)
 
     # Print banner
     first_time_config = False if os.path.exists(init_file) else True
     print_banner(first_time_config)
 
     # Check for config directory
-    config_dir = os.path.join(home_dir, "config")
+    config_dir = os.path.join(home_dir, constants.CONFIG_DIRECTORY)
     check_dir_exists(config_dir, create=True)
 
     # Display help to first time users
@@ -455,77 +515,42 @@ def configure():
         welcome_msg = (
             "Welcome to CryptoBots! In order to trade on any exchanges, "
             + "you must first create API keys.\nOnce you have done that, you can use this "
-            + "method (i.e. `cryptobots configure`) to add or update those keys."
+            + "method (i.e. `cryptobots configure`) to add or\nupdate those keys.\n\n"
+            + "You can also use this method to point CryptoBots towards your own project "
+            + "directories,\nallowing you to use CryptoBots as a convenient way to deploy "
+            + "your own bots.\n"
         )
         click.echo(welcome_msg)
 
-    # Ask to initialise keys
-    try:
-        configure_keys = click.prompt(
-            text=click.style(
-                text="Are you ready to configure your exchange API keys?", fg="green"
-            ),
-            default=True,
-        )
-    except click.Abort:
-        configure_keys = False
+    # Prompt for option
+    options = {1: "Add exchange keys", 2: "Add project directory"}
+    options[len(options) + 1] = "Exit"
+    options_msg = "Configuration options:\n" + "\n".join(
+        [f"  [{k}] {v}" for k, v in options.items()]
+    )
+    click.echo(options_msg)
+    option_selection: int = click.prompt(
+        text=click.style(text="Select an option number", fg="green"),
+        type=click.IntRange(min=min(options), max=max(options)),
+    )
 
-    if configure_keys:
-        # Look for keys file
-        keys_filepath = os.path.join(home_dir, "config", "keys.yaml")
-        if os.path.exists(keys_filepath):
-            # File already exists, load it
-            keys_config = autotrader.utilities.read_yaml(keys_filepath)
-        else:
-            # Create new file
-            keys_config = {}
+    # Process selection
+    match option_selection:
+        case 1:
+            # Configure exchange keys
+            configure_keys(home_dir=home_dir)
 
-        # Add keys for exchanges
-        click.echo("Configuring API keys...")
-        while True:
-            valid_exchange = False
-            while not valid_exchange:
-                exchange: str = click.prompt(
-                    text=click.style(
-                        text="What is the name of the exchange you would "
-                        + "like to configure?",
-                        fg="green",
-                    ),
-                    type=click.STRING,
-                )
-                if exchange.lower() not in ccxt.exchanges:
-                    click.echo("Invalid exchange. Please check spelling and try again.")
-                valid_exchange = True
+        case 2:
+            # Add project directory
+            add_project_dir(home_dir=home_dir)
 
-            keys_config = update_keys_config(keys_config, exchange)
-
-            # Continue
-            repeat = click.prompt(
-                text=click.style(
-                    text="Would you like to configure another exchange?", fg="green"
-                ),
-                default=True,
-            )
-            if not repeat:
-                break
-
-        autotrader.utilities.write_yaml(keys_config, keys_filepath)
-        click.echo(f"Done configuring keys - written to {keys_filepath}.")
-
-    else:
-        # Display featured exchanges
-        bybit = create_link(
-            url="https://www.bybit.com/invite?ref=7NDOBW", label="Bybit"
-        )
-        featured_excahnges = (
-            "\nThe following exchanges are featured by CryptoBots (ctrl+click "
-            + f"to open):\n - {bybit}\n"
-        )
-        click.echo(featured_excahnges)
+        case _:
+            # Exit
+            pass
 
     if first_time_config:
         # Add init file and write current time
-        write_init_file(init_file)
+        update_config(init_file)
         click.echo("Cryptobots initialised.")
 
 

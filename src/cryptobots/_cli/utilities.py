@@ -13,7 +13,7 @@ import ccxt.pro as ccxt_pro
 from typing import Optional
 from cryptobots._cli import constants
 from datetime import datetime, timedelta
-from autotrader.utilities import read_yaml
+from autotrader.utilities import read_yaml, write_yaml
 
 
 def strategy_name_from_module_name(name: str):
@@ -135,26 +135,26 @@ def check_for_update():
             pip.main(["install", "--upgrade", "cryptobots"])
 
 
-def check_update_condition(init_file: str):
+def check_update_condition(config_filepath: str):
     # Check when last update check was performed
-    with open(init_file, "r") as f:
-        lines = f.readlines()
+    if os.path.exists(config_filepath):
+        # Load existing config
+        with open(config_filepath, "r") as f:
+            config = json.load(f)
 
-    # Parse update time
-    if len(lines) == 0:
-        # Initialised previously, but no time present
-        last_update = datetime.now() - timedelta(days=2)
+        # Get update time
+        last_update = datetime.strptime(config["last_update"], constants.STRFTIME)
 
     else:
-        # Get last update check time
-        last_update = datetime.strptime(lines[0].strip("\n"), constants.STRFTIME)
+        # Config doesn't exist yet
+        last_update = datetime.now() - timedelta(days=2)
 
     # Check for update
     if last_update.date() < datetime.now().date():
         check_for_update()
 
         # Update file
-        write_init_file(init_file)
+        update_config(config_filepath)
 
 
 def check_home_dir():
@@ -440,7 +440,7 @@ def save_backtest_config(home_dir: str, filename: str, config: dict):
     # Save
     fp = os.path.join(strat_conf_dir, filename)
     with open(fp, "w") as f:
-        json.dump(config, f)
+        json.dump(config, f, indent=2)
 
     return fp
 
@@ -564,7 +564,109 @@ async def get_cash_and_carry(exchange: str, prices: bool):
     return cash_and_carry[show_cols]
 
 
-def write_init_file(init_file: str):
-    """Writes the init file and current date."""
-    with open(init_file, "w") as f:
-        f.write(f"{datetime.now().strftime(constants.STRFTIME)}\n")
+def update_config(config_filepath: str, update_time: Optional[bool] = True, **kwargs):
+    """Update the configuration file."""
+    # Check for existing file
+    if os.path.exists(config_filepath):
+        # Load existing config
+        with open(config_filepath, "r") as f:
+            config = json.load(f)
+    else:
+        # Config doesn't exist yet
+        config = {}
+
+    # Add kwargs to config
+    for k, v in kwargs.items():
+        if k == "project":
+            # Add this to the user projects
+            projects: dict[str, str] = config.setdefault("projects", {})
+            projects[v[0]] = v[1]
+
+        else:
+            config[k] = v
+
+    # Update latest time
+    if update_time:
+        config["last_update"] = f"{datetime.now().strftime(constants.STRFTIME)}"
+
+    # Dump updated config to file
+    with open(config_filepath, "w") as f:
+        json.dump(config, f, indent=2)
+
+
+def configure_keys(home_dir: str):
+    click.clear()
+    print_banner()
+
+    # Display featured exchanges
+    bybit = create_link(url="https://www.bybit.com/invite?ref=7NDOBW", label="Bybit")
+    featured_excahnges = (
+        f"The following exchanges are featured by CryptoBots:\n - {bybit}\n"
+    )
+    click.echo(featured_excahnges)
+
+    # Look for keys file
+    keys_filepath = os.path.join(
+        home_dir, constants.CONFIG_DIRECTORY, constants.KEYS_FILENAME
+    )
+    if os.path.exists(keys_filepath):
+        # File already exists, load it
+        keys_config = read_yaml(keys_filepath)
+    else:
+        # Create new file
+        keys_config = {}
+
+    # Add keys for exchanges
+    click.echo("Configuring API keys")
+    while True:
+        valid_exchange = False
+        while not valid_exchange:
+            exchange: str = click.prompt(
+                text=click.style(
+                    text="What is the name of the exchange you would "
+                    + "like to configure?",
+                    fg="green",
+                ),
+                type=click.STRING,
+            )
+            if exchange.lower() not in ccxt.exchanges:
+                click.echo("Invalid exchange. Please check spelling and try again.")
+            valid_exchange = True
+
+        keys_config = update_keys_config(keys_config, exchange)
+
+        # Continue
+        repeat = click.prompt(
+            text=click.style(
+                text="Would you like to configure another exchange?", fg="green"
+            ),
+            default=True,
+        )
+        if not repeat:
+            break
+
+    write_yaml(keys_config, keys_filepath)
+    click.echo(f"Done configuring keys - written to {keys_filepath}.")
+
+
+def add_project_dir(home_dir: str):
+    """Add the path to a user defined project directory."""
+    project_dir_path = click.prompt(
+        text=click.style(
+            text="Enter the path to your project",
+            fg="green",
+        ),
+        type=click.Path(exists=True, file_okay=False, resolve_path=True),
+    )
+
+    # TODO - add project structure validity checks
+    project_name = os.path.basename(project_dir_path)
+
+    # Add project directory to configuration file
+    config_filepath = os.path.join(home_dir, constants.CONFIG_FILE)
+    update_config(
+        config_filepath=config_filepath,
+        update_time=False,
+        project=(project_name, project_dir_path),
+    )
+    click.echo(f"Added {project_name} to your projects.")
