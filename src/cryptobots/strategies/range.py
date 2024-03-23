@@ -34,6 +34,8 @@ class Range(Strategy):
     used to size the orders per grid level.
     """
 
+    MAX_ORDERS = 16
+
     def __init__(
         self,
         parameters: dict,
@@ -62,7 +64,7 @@ class Range(Strategy):
         # Unpack parameters
         self.lower_price = Decimal(str(parameters["lower_price"]))
         self.upper_price = Decimal(str(parameters["upper_price"]))
-        self.no_levels = int(2 * np.ceil(parameters["no_levels"] / 2))
+        self.no_levels = int(2 * np.ceil(float(parameters["no_levels"]) / 2))
         self.max_position = Decimal(str(parameters["max_position"]))
 
         # Initialise state
@@ -159,7 +161,6 @@ class Range(Strategy):
                 else:
                     # This order is in the target - mark as existing
                     # by removing from missing_orders dict
-                    # TODO - check size?
                     grid_no = target_prices.index(Decimal(str(price))) + 1
                     missing_orders[direction].pop(grid_no)
 
@@ -169,8 +170,41 @@ class Range(Strategy):
         sell_levels_filled = -min(0, np.ceil(net_position / self.order_size))
         grid_levels_filled = {1: buy_levels_filled, -1: sell_levels_filled}
 
-        # Create orders for missing levels
+        # Set limits on orders to be placed - only place up to MAX_ORDERS orders at a time.
+        # This means if more than MAX_ORDERS levels are specified for the grid, only the
+        # closest MAX_ORDERS should be placed.
         mid_price = Decimal(str(self.exchange.get_orderbook(self.instrument).midprice))
+
+        # Calculate distance of midprice from each level of buy and sell prices
+        distances = {
+            d: {l: abs(mid_price - p) for l, p in ps.items()}
+            for d, ps in self.target_order_prices.items()
+        }
+        min_d = {d: {min(v, key=v.get): min(v.values())} for d, v in distances.items()}
+        dir_mins = {d: min(v.values()) for d, v in min_d.items()}
+
+        # Determine order direction mid price is closest too
+        direction = min(dir_mins, key=dir_mins.get)
+
+        # Determine nearest level matching the direction
+        nearest_level = min_d[direction].popitem()[0]
+
+        # Calculate allowable grid ranges for each direction
+        levels_per_side = int(np.ceil(self.MAX_ORDERS / 2))
+        allowed_levels = {
+            direction: [
+                i
+                for i in range(
+                    nearest_level - levels_per_side, nearest_level + levels_per_side
+                )
+                if i > 0
+            ]
+        }
+        allowed_levels[-direction] = [
+            i for i in range(1, self.MAX_ORDERS - len(allowed_levels[direction]) + 1)
+        ]
+
+        # Create orders for missing levels
         for direction, orders in missing_orders.items():
             for grid_no, order_price in orders.items():
                 # Check order price against current mid price
@@ -179,8 +213,11 @@ class Range(Strategy):
                 # Check current position to prevent replacing an order already filled
                 level_not_filled = grid_no > grid_levels_filled[direction]
 
+                # Check grid_no is in the allowed levels
+                place_level = grid_no in allowed_levels[direction]
+
                 # Check both conditions
-                if price_valid and level_not_filled:
+                if price_valid and level_not_filled and place_level:
                     # Proceed with order
                     o = Order(
                         instrument=self.instrument,
