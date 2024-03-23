@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryptobots"
-version = "0.5.2"
+version = "0.5.3"
 description = "Cyptocurrency trading bots"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -47,7 +47,7 @@ where = ["src"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.5.2"
+version = "0.5.3"
 tag_format = "v$version"
 version_provider = "pep621"
 version_files = [

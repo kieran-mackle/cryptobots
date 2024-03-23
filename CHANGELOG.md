@@ -1,3 +1,10 @@
+## v0.5.3 (2024-03-23)
+
+### Fix
+
+- **Strategy**: fix duplicate order cancellation for range bot
+- **Strategy**: range bot will actively prune stale orders
+
 ## v0.5.2 (2024-03-23)
 
 ### Fix
