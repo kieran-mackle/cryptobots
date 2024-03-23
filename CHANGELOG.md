@@ -1,3 +1,10 @@
+## v0.5.2 (2024-03-23)
+
+### Fix
+
+- **Strategy**: range bot has maximum orders to place at one time
+- **Strategy**: type conversion for no_levels param in range bot
+
 ## v0.5.1 (2024-03-23)
 
 ### Fix
