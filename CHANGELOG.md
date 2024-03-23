@@ -1,3 +1,10 @@
+## v0.5.0 (2024-03-23)
+
+### Feat
+
+- **CLI**: improve exchange api key management
+- **CLI**: added project management
+
 ## v0.4.0 (2024-03-22)
 
 ### Feat
