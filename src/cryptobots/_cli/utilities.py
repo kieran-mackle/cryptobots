@@ -593,6 +593,8 @@ def update_config(config_filepath: str, update_time: Optional[bool] = True, **kw
     with open(config_filepath, "w") as f:
         json.dump(config, f, indent=2)
 
+    return config
+
 
 def configure_keys(home_dir: str):
     click.clear()
@@ -649,24 +651,93 @@ def configure_keys(home_dir: str):
     click.echo(f"Done configuring keys - written to {keys_filepath}.")
 
 
-def add_project_dir(home_dir: str):
+def manage_project_dir(home_dir: str):
     """Add the path to a user defined project directory."""
-    project_dir_path = click.prompt(
-        text=click.style(
-            text="Enter the path to your project",
-            fg="green",
-        ),
-        type=click.Path(exists=True, file_okay=False, resolve_path=True),
-    )
 
-    # TODO - add project structure validity checks
-    project_name = os.path.basename(project_dir_path)
+    def clear_and_display(config: dict):
+        click.clear()
+        print_banner()
 
-    # Add project directory to configuration file
+        # Display added projects
+        if "projects" in config and len(config["projects"]) > 0:
+            msg = "You have added the following projects:\n"
+            for i, project in enumerate(config["projects"]):
+                msg += f"  [{i+1}] {project}\n"
+        else:
+            msg = "You have not added any projects yet."
+        click.echo(msg)
+
+    # Load configuration to display current projects
     config_filepath = os.path.join(home_dir, constants.CONFIG_FILE)
-    update_config(
-        config_filepath=config_filepath,
-        update_time=False,
-        project=(project_name, project_dir_path),
-    )
-    click.echo(f"Added {project_name} to your projects.")
+    if os.path.exists(config_filepath):
+        # Load existing config
+        with open(config_filepath, "r") as f:
+            config = json.load(f)
+
+    else:
+        # Config doesn't exist yet
+        config = {}
+
+    # Display added projects
+    clear_and_display(config)
+
+    # Prompt options
+    managing = True
+    while managing:
+        try:
+            selection: str = click.prompt(
+                text=click.style(
+                    text="Would you like to add or remove a project?",
+                    fg="green",
+                ),
+                type=click.Choice(["add", "remove"], case_sensitive=False),
+            )
+
+            if selection.lower() == "add":
+                # Prompt for project path
+                project_dir_path = click.prompt(
+                    text=click.style(
+                        text="Enter the path to your project",
+                        fg="green",
+                    ),
+                    type=click.Path(exists=True, file_okay=False, resolve_path=True),
+                )
+
+                # TODO - add project structure validity checks
+                project_name = os.path.basename(project_dir_path)
+
+                # Add project directory to configuration file
+                config = update_config(
+                    config_filepath=config_filepath,
+                    update_time=False,
+                    project=(project_name, project_dir_path),
+                )
+                click.echo(f"Added {project_name} to your projects.")
+                click.pause()
+                clear_and_display(config)
+
+            elif selection.lower() == "remove":
+                # Remove a project
+                project_to_remove = click.prompt(
+                    text=click.style(
+                        text="Enter the project number to remove",
+                        fg="green",
+                    ),
+                    type=click.IntRange(min=1, max=len(config["projects"])),
+                )
+
+                # Remove this from config
+                project_name = list(config["projects"])[project_to_remove - 1]
+                config["projects"].pop(project_name)
+
+                # Write updated config
+                with open(config_filepath, "w") as f:
+                    json.dump(config, f, indent=2)
+
+                click.echo(f"Removed {project_name} from your projects.")
+                click.pause()
+                clear_and_display(config)
+
+        except click.Abort:
+            click.echo("")
+            managing = False
