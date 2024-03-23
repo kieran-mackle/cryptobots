@@ -81,7 +81,7 @@ def update_keys_config(keys_config: dict, exchange: str):
             # This net has been configured already
             overwrite = click.prompt(
                 text=click.style(
-                    text=f"  You have already configured keys for {exchange} {net_key}. Would you like to continue and overwrite?",
+                    text=f"You have already configured keys for {exchange} {net_key}. Would you like to continue and overwrite?",
                     fg="green",
                 ),
                 default=True,
@@ -89,6 +89,24 @@ def update_keys_config(keys_config: dict, exchange: str):
             if not overwrite:
                 # Exit
                 return keys_config
+
+            else:
+                # Delete this key?
+                delete = click.prompt(
+                    text=click.style(
+                        text=f"Would you like to delete this key?",
+                        fg="green",
+                    ),
+                    default=False,
+                )
+                if delete:
+                    # Remove from config then return
+                    keys_config[exchange_config_key].pop(net_key)
+                    if len(keys_config[exchange_config_key]) == 0:
+                        keys_config.pop(exchange_config_key)
+                    click.echo(f"Removed {exchange} {net_key} API key.")
+                    click.pause()
+                    return keys_config
 
     click.echo(f"  Configuring API keys for {exchange} {net_key}.")
     api_key = click.prompt(text="    Please enter your API key")
@@ -597,15 +615,34 @@ def update_config(config_filepath: str, update_time: Optional[bool] = True, **kw
 
 
 def configure_keys(home_dir: str):
-    click.clear()
-    print_banner()
-
-    # Display featured exchanges
+    """Configure exchange API keys."""
+    # Create features exchanges links
     bybit = create_link(url="https://www.bybit.com/invite?ref=7NDOBW", label="Bybit")
     featured_excahnges = (
         f"The following exchanges are featured by CryptoBots:\n - {bybit}\n"
     )
-    click.echo(featured_excahnges)
+
+    def clear_and_display(config: dict):
+        click.clear()
+        print_banner()
+
+        # Display configured exchanges
+        if len(config) > 0:
+            msg = "You have configured the following exchanges:\n"
+            for exchange, conf in config.items():
+                name = exchange.lower().split(":")[-1]
+                msg += f"  - {name}:\n"
+                for net, c in conf.items():
+                    msg += f"      {net}: {c['api_key']}\n"
+
+        else:
+            msg = (
+                "You have not added any exchanges yet. How about adding one of "
+                + "CryptoBots featured exchanges?\n\n"
+            )
+            msg += featured_excahnges
+
+        click.echo(msg)
 
     # Look for keys file
     keys_filepath = os.path.join(
@@ -618,8 +655,10 @@ def configure_keys(home_dir: str):
         # Create new file
         keys_config = {}
 
+    # Display configured exchanges
+    clear_and_display(keys_config)
+
     # Add keys for exchanges
-    click.echo("Configuring API keys")
     while True:
         valid_exchange = False
         while not valid_exchange:
@@ -636,6 +675,8 @@ def configure_keys(home_dir: str):
             valid_exchange = True
 
         keys_config = update_keys_config(keys_config, exchange)
+        write_yaml(keys_config, keys_filepath)
+        clear_and_display(keys_config)
 
         # Continue
         repeat = click.prompt(
@@ -647,8 +688,7 @@ def configure_keys(home_dir: str):
         if not repeat:
             break
 
-    write_yaml(keys_config, keys_filepath)
-    click.echo(f"Done configuring keys - written to {keys_filepath}.")
+    click.echo("Done configuring keys.")
 
 
 def manage_project_dir(home_dir: str):

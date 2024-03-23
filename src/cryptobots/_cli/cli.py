@@ -519,7 +519,7 @@ def configure():
         click.echo(welcome_msg)
 
     # Prompt for option
-    options = {1: "Add exchange keys", 2: "Manage projects"}
+    options = {1: "Manage exchange API keys", 2: "Manage projects"}
     options[len(options) + 1] = "Exit"
     options_msg = "Configuration options:\n" + "\n".join(
         [f"  [{k}] {v}" for k, v in options.items()]
