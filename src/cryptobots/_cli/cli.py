@@ -486,16 +486,12 @@ def stop():
 @click.command()
 def configure():
     """Configure the cryptobots environment."""
-    import ccxt
-    import autotrader
     from cryptobots._cli.utilities import (
         check_dir_exists,
         print_banner,
-        update_keys_config,
-        create_link,
         update_config,
         configure_keys,
-        add_project_dir,
+        manage_project_dir,
     )
 
     # Define paths
@@ -523,7 +519,7 @@ def configure():
         click.echo(welcome_msg)
 
     # Prompt for option
-    options = {1: "Add exchange keys", 2: "Add project directory"}
+    options = {1: "Manage exchange API keys", 2: "Manage projects"}
     options[len(options) + 1] = "Exit"
     options_msg = "Configuration options:\n" + "\n".join(
         [f"  [{k}] {v}" for k, v in options.items()]
@@ -542,7 +538,7 @@ def configure():
 
         case 2:
             # Add project directory
-            add_project_dir(home_dir=home_dir)
+            manage_project_dir(home_dir=home_dir)
 
         case _:
             # Exit
