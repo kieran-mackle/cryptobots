@@ -188,6 +188,10 @@ def check_home_dir():
                 os.path.expanduser("~"), constants.DEFAULT_HOME_DIRECTORY
             ),
         )
+
+        # Make the directory
+        os.mkdir(home_dir)
+
     return home_dir
 
 
