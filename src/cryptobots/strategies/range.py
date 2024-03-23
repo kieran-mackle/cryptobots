@@ -134,7 +134,8 @@ class Range(Strategy):
             cat = categorised_orders.setdefault(order.direction, {})
             if order.order_limit_price in cat:
                 # Duplicate order - cancel it
-                self.exchange.cancel_order(order_id=order.id)
+                self.logger.info(f"Cancelling duplicate order: {order}")
+                self.exchange.cancel_order(order_id=order.id, symbol=order.instrument)
 
             else:
                 # New order at this price, store it
@@ -142,37 +143,7 @@ class Range(Strategy):
                     # This is not a TP, add it
                     cat[order.order_limit_price] = order
 
-        # Keep track of target orders which exist
-        missing_orders = deepcopy(self.target_order_prices)
-
-        # Compare categorised orders against target orders
-        for direction, orders in categorised_orders.items():
-            # Get target prices for this trade direction (buy/sell)
-            target_prices = list(self.target_order_prices[direction].values())
-
-            # Check each of the existing buy/sell orders
-            for price, order in orders.items():
-                if Decimal(str(price)) not in target_prices:
-                    # Bad order - cancel it
-                    self.exchange.cancel_order(
-                        order_id=order.id, symbol=order.instrument
-                    )
-
-                else:
-                    # This order is in the target - mark as existing
-                    # by removing from missing_orders dict
-                    grid_no = target_prices.index(Decimal(str(price))) + 1
-                    missing_orders[direction].pop(grid_no)
-
-        # Calculate fills based on current position
-        net_position = self.current_position()
-        buy_levels_filled = max(0, np.floor(net_position / self.order_size))
-        sell_levels_filled = -min(0, np.ceil(net_position / self.order_size))
-        grid_levels_filled = {1: buy_levels_filled, -1: sell_levels_filled}
-
-        # Set limits on orders to be placed - only place up to MAX_ORDERS orders at a time.
-        # This means if more than MAX_ORDERS levels are specified for the grid, only the
-        # closest MAX_ORDERS should be placed.
+        # Determine orders to be placed based on current price and MAX_ORDERS
         mid_price = Decimal(str(self.exchange.get_orderbook(self.instrument).midprice))
 
         # Calculate distance of midprice from each level of buy and sell prices
@@ -203,6 +174,41 @@ class Range(Strategy):
         allowed_levels[-direction] = [
             i for i in range(1, self.MAX_ORDERS - len(allowed_levels[direction]) + 1)
         ]
+
+        # Replicate target_order_prices dict with only the allowable levels
+        target_order_prices = {
+            d: {l: p for l, p in lp.items() if l in allowed_levels[d]}
+            for d, lp in self.target_order_prices.items()
+        }
+
+        # Keep track of target orders which exist
+        missing_orders = deepcopy(target_order_prices)
+
+        # Compare categorised orders against target orders
+        for direction, orders in categorised_orders.items():
+            # Get target prices for this trade direction (buy/sell)
+            target_prices = list(target_order_prices[direction].values())
+
+            # Check each of the existing buy/sell orders
+            for price, order in orders.items():
+                if Decimal(str(price)) not in target_prices:
+                    # Bad order - cancel it
+                    self.logger.info(f"Cancelling out-of-place order: {order}")
+                    self.exchange.cancel_order(
+                        order_id=order.id, symbol=order.instrument
+                    )
+
+                else:
+                    # This order is in the target - mark as existing
+                    # by removing from missing_orders dict
+                    grid_no = target_prices.index(Decimal(str(price))) + 1
+                    missing_orders[direction].pop(grid_no)
+
+        # Calculate fills based on current position
+        net_position = self.current_position()
+        buy_levels_filled = max(0, np.floor(net_position / self.order_size))
+        sell_levels_filled = -min(0, np.ceil(net_position / self.order_size))
+        grid_levels_filled = {1: buy_levels_filled, -1: sell_levels_filled}
 
         # Create orders for missing levels
         for direction, orders in missing_orders.items():
