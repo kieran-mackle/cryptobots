@@ -1,3 +1,9 @@
+## v0.5.1 (2024-03-23)
+
+### Fix
+
+- create home directory on first use
+
 ## v0.5.0 (2024-03-23)
 
 ### Feat
