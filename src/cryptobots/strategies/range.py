@@ -62,7 +62,7 @@ class Range(Strategy):
         # Unpack parameters
         self.lower_price = Decimal(str(parameters["lower_price"]))
         self.upper_price = Decimal(str(parameters["upper_price"]))
-        self.no_levels = int(2 * np.ceil(parameters["no_levels"] / 2))
+        self.no_levels = int(2 * np.ceil(float(parameters["no_levels"]) / 2))
         self.max_position = Decimal(str(parameters["max_position"]))
 
         # Initialise state
