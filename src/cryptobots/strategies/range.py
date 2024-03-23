@@ -135,7 +135,7 @@ class Range(Strategy):
             if order.order_limit_price in cat:
                 # Duplicate order - cancel it
                 self.logger.info(f"Cancelling duplicate order: {order}")
-                self.exchange.cancel_order(order_id=order.id)
+                self.exchange.cancel_order(order_id=order.id, symbol=order.instrument)
 
             else:
                 # New order at this price, store it
