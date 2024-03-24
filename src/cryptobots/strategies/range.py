@@ -232,6 +232,12 @@ class Range(Strategy):
                         order_type="limit",
                         order_limit_price=order_price,
                         take_profit=order_price + direction * self.grid_space,
+                        ccxt_params={
+                            "takeProfit": {
+                                "price": order_price + direction * self.grid_space,
+                                "triggerPrice": order_price,
+                            }
+                        },
                     )
                     new_orders.append(o)
                     self.logger.info(f"Added new order for grid level {grid_no}: {o}")
