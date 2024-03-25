@@ -66,9 +66,12 @@ class Range(Strategy):
         self.upper_price = Decimal(str(parameters["upper_price"]))
         self.no_levels = int(2 * np.ceil(float(parameters["no_levels"]) / 2))
         self.max_position = Decimal(str(parameters["max_position"]))
+        self.origin_direction = np.sign(int(parameters["origin_direction"]))
 
         # Initialise state
-        self.ref_price = (self.upper_price + self.lower_price) / 2
+        self.origin_price = ((self.upper_price + self.lower_price) / 2).quantize(
+            self.price_precision
+        )
         self.order_size = (2 * self.max_position / self.no_levels).quantize(
             self.size_precision
         )
@@ -76,18 +79,24 @@ class Range(Strategy):
             (self.upper_price - self.lower_price) / self.no_levels
         ).quantize(self.price_precision)
         buy_prices = {
-            i: self.ref_price - i * self.grid_space
+            i: self.origin_price - i * self.grid_space
             for i in range(1, int(self.no_levels / 2) + 1)
         }
         sell_prices = {
-            i: self.ref_price + i * self.grid_space
+            i: self.origin_price + i * self.grid_space
             for i in range(1, int(self.no_levels / 2) + 1)
         }
         self.target_order_prices = {1: buy_prices, -1: sell_prices}
+
+        # Check for origin order
+        if self.origin_direction != 0:
+            # Add origin price to target prices
+            self.target_order_prices[self.origin_direction][0] = self.origin_price
+
         self.logger.info(f"Order size per level: {self.order_size} units.")
         self.logger.info(
             f"Estimated profit per level: ${self.grid_space*self.order_size:,} "
-            + f"(~{100*self.grid_space/self.ref_price:.2f}%)."
+            + f"(~{100*self.grid_space/self.origin_price:.2f}%)."
         )
 
     def generate_signal(self, dt: datetime) -> Order | List[Order] | None:
@@ -181,6 +190,12 @@ class Range(Strategy):
             for d, lp in self.target_order_prices.items()
         }
 
+        # Check for origin order
+        if self.origin_direction != 0:
+            # Add origin order to allowable levels
+            allowed_levels[self.origin_direction].append(0)
+            target_order_prices[self.origin_direction][0] = self.origin_price
+
         # Keep track of target orders which exist
         missing_orders = deepcopy(target_order_prices)
 
@@ -217,7 +232,10 @@ class Range(Strategy):
                 price_valid = direction * (mid_price - order_price) > 0
 
                 # Check current position to prevent replacing an order already filled
-                level_not_filled = grid_no > grid_levels_filled[direction]
+                level_not_filled = (
+                    grid_levels_filled[direction] == 0
+                    or grid_no > grid_levels_filled[direction]
+                )
 
                 # Check grid_no is in the allowed levels
                 place_level = grid_no in allowed_levels[direction]

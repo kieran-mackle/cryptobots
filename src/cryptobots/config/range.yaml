@@ -3,10 +3,11 @@ MODULE: 'range'
 CLASS: 'Range'
 INTERVAL: '10s'
 PARAMETERS:
-  lower_price: 50
-  upper_price: 60
-  no_levels: 40
-  max_position: 20
-WATCHLIST: ['AVAX/USDT:USDT']
+  lower_price: 3150
+  upper_price: 3500
+  no_levels: 20
+  max_position: 0.1
+  origin_direction: 1
+WATCHLIST: ['ETH/USDT:USDT']
 INCLUDE: ["INTERVAL"] # used when displaying params in CLI, exclude others
 BACKTEST_READY: False
